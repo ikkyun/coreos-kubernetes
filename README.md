@@ -1,0 +1,2 @@
+# coreos-kubernetes
+core,kubernetes
