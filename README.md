@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Kubernetes on CoreOS
 
 This repo contains tooling and documention around deploying Kubernetes using CoreOS.
@@ -34,3 +35,7 @@ https://coreos.com/kubernetes/docs/latest/
 ## Running Kubernetes Conformance Tests
 
 - [Conformance Tests](Documentation/conformance-tests.md)
+=======
+# coreos-kubernetes
+core,kubernetes
+>>>>>>> aebbeec10470175c128c85b5d3e49cba53f68784
