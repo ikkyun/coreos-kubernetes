@@ -32,7 +32,7 @@ ENV_FILE=/run/coreos-kubernetes/options.env
 
 TMPDIR=/var/tmp/
 DOCKER_HOST=unix:///var/run/early-docker.sock
-FLANNEL_VER=0.5.3
+FLANNEL_VER=0.5.4
 ETCD_SSL_DIR=/etc/ssl/etcd
 
 # -------------
@@ -403,8 +403,7 @@ EOF
                             "-addr=0.0.0.0:53",
                             "-domain=cluster.local."
                         ],
-                        #"image": "shenshouer/skydns:2015-03-11-001",
-                        "image":"skynetservices/skydns:2.5.3a"
+                        "image": "skynetservices/skydns:2.5.3a",
                         "livenessProbe": {
                             "httpGet": {
                                 "path": "/healthz",

@@ -21,7 +21,7 @@ ENV_FILE=/run/coreos-kubernetes/options.env
 
 TMPDIR=/var/tmp/
 DOCKER_HOST=unix:///var/run/early-docker.sock
-FLANNEL_VER=0.5.3
+FLANNEL_VER=0.5.4
 ETCD_SSL_DIR=/etc/ssl/etcd
 
 # -------------
