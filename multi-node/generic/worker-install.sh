@@ -10,7 +10,7 @@ export ETCD_ENDPOINTS=
 export CONTROLLER_ENDPOINT=
 
 # Specify the version (vX.Y.Z) of Kubernetes assets to deploy
-export K8S_VER=v1.0.6
+export K8S_VER=v1.2.0-alpha.2
 
 # The IP address of the cluster DNS service.
 # This must be the same DNS_SERVICE_IP used when configuring the controller nodes.
@@ -53,7 +53,10 @@ function init_templates {
         cat << EOF > $TEMPLATE
 [Service]
 ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
-ExecStart=/usr/bin/kubelet \
+ExecStartPre=/usr/bin/mkdir -p /opt/bin
+ExecStartPre=/bin/cp /kubernetes/kubelet /opt/bin/
+ExecStartPre=/bin/chmod a+x /opt/bin/kubelet
+ExecStart=/opt/bin/kubelet \
   --api_servers=${CONTROLLER_ENDPOINT} \
   --register-node=true \
   --allow-privileged=true \
@@ -64,57 +67,12 @@ ExecStart=/usr/bin/kubelet \
   --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml \
   --tls-cert-file=/etc/kubernetes/ssl/worker.pem \
   --tls-private-key-file=/etc/kubernetes/ssl/worker-key.pem \
-  --pod-infra-container-image="shenshouer/pause:0.8.0" \
+  --pod-infra-container-image="shenshouer/pause:2.0" \
   --cadvisor-port=0
 Restart=always
 RestartSec=10
 [Install]
 WantedBy=multi-user.target
-EOF
-    }
-
-    local TEMPLATE=/etc/systemd/system/flanneld.service
-    [ -f $TEMPLATE ] || {
-        echo "TEMPLATE: $TEMPLATE"
-        mkdir -p $(dirname $TEMPLATE)
-        cat << EOF > $TEMPLATE
-[Unit]
-Description=Network fabric for containers
-Documentation=https://github.com/coreos/flannel
-Requires=early-docker.service
-After=etcd.service etcd2.service early-docker.service
-Before=early-docker.target
-
-[Service]
-Type=notify
-Restart=always
-RestartSec=5
-Environment="TMPDIR=/var/tmp/"
-Environment="DOCKER_HOST=unix:///var/run/early-docker.sock"
-Environment="FLANNEL_VER=0.5.3"
-Environment="ETCD_SSL_DIR=/etc/ssl/etcd"
-LimitNOFILE=40000
-LimitNPROC=1048576
-ExecStartPre=/sbin/modprobe ip_tables
-ExecStartPre=/usr/bin/mkdir -p /run/flannel
-ExecStartPre=/usr/bin/mkdir -p "${ETCD_SSL_DIR}"
-ExecStartPre=/usr/bin/touch /run/flannel/options.env
-
-ExecStart=/usr/libexec/sdnotify-proxy /run/flannel/sd.sock \
-  /usr/bin/docker run --net=host --privileged=true --rm \
-  --volume=/run/flannel:/run/flannel \
-  --env=NOTIFY_SOCKET=/run/flannel/sd.sock \
-  --env=AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-  --env=AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-  --env-file=/run/flannel/options.env \
-  --volume=/usr/share/ca-certificates:/etc/ssl/certs:ro \
-  --volume=${ETCD_SSL_DIR}:/etc/ssl/etcd:ro \
-  shenshouer/flannel:${FLANNEL_VER} /opt/bin/flanneld --ip-masq=true
-
-# Update docker options
-ExecStartPost=/usr/bin/docker run --net=host --rm -v /run:/run \
-  shenshouer/flannel:${FLANNEL_VER} \
-  /opt/bin/mk-docker-opts.sh -d /run/flannel_docker_opts.env -i
 EOF
     }
 
@@ -143,47 +101,22 @@ current-context: kubelet-context
 EOF
     }
 
-    local TEMPLATE=/etc/kubernetes/manifests/kube-proxy.yaml
+    local TEMPLATE=/etc/systemd/system/kube-proxy.service
     [ -f $TEMPLATE ] || {
         echo "TEMPLATE: $TEMPLATE"
         mkdir -p $(dirname $TEMPLATE)
         cat << EOF > $TEMPLATE
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kube-proxy
-  namespace: kube-system
-spec:
-  hostNetwork: true
-  containers:
-  - name: kube-proxy
-    image: shenshouer/hyperkube:$K8S_VER
-    command:
-    - /hyperkube
-    - proxy
-    - --master=${CONTROLLER_ENDPOINT}
-    - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
-    securityContext:
-      privileged: true
-    volumeMounts:
-      - mountPath: /etc/ssl/certs
-        name: "ssl-certs"
-      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
-        name: "kubeconfig"
-        readOnly: true
-      - mountPath: /etc/kubernetes/ssl
-        name: "etc-kube-ssl"
-        readOnly: true
-  volumes:
-    - name: "ssl-certs"
-      hostPath:
-        path: "/usr/share/ca-certificates"
-    - name: "kubeconfig"
-      hostPath:
-        path: "/etc/kubernetes/worker-kubeconfig.yaml"
-    - name: "etc-kube-ssl"
-      hostPath:
-        path: "/etc/kubernetes/ssl"
+[Service]
+ExecStartPre=/usr/bin/mkdir -p /opt/bin
+ExecStartPre=/bin/cp /kubernetes/kube-proxy /opt/bin/
+ExecStartPre=/bin/chmod a+x /opt/bin/kube-proxy
+ExecStart=/opt/bin/kube-proxy \
+  --master=${CONTROLLER_ENDPOINT} \
+  --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
+Restart=always
+RestartSec=10
+[Install]
+WantedBy=multi-user.target
 EOF
     }
 
