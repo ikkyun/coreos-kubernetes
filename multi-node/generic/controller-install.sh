@@ -572,5 +572,6 @@ systemctl stop update-engine; systemctl mask update-engine
 
 systemctl daemon-reload
 systemctl enable kubelet; systemctl start kubelet
+systemctl enable kube-proxy; systemctl start kube-proxy
 start_addons
 echo "DONE"
